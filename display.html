@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>班親會即時關注焦點</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入開源文字雲套件 wordcloud2.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col p-6 items-center justify-between">
+  
+  <header class="w-full flex justify-between items-center border-b border-slate-700 pb-4">
+    <div>
+      <h1 class="text-3xl font-black tracking-wider text-indigo-400">親師焦點：我們最在乎的事</h1>
+      <p class="text-sm text-slate-400 mt-1">掃描現場 QR Code 填寫，螢幕即時統計同步更新</p>
+    </div>
+    <div class="text-right">
+      <span class="text-xs text-slate-400">目前已填答家長數</span>
+      <div id="counter" class="text-4xl font-extrabold text-emerald-400">0</div>
+    </div>
+  </header>
+
+  <!-- 文字雲畫布容器 -->
+  <main class="w-full flex-1 flex items-center justify-center my-4 relative">
+    <canvas id="cloudCanvas" class="w-full h-full max-h-[70vh]"></canvas>
+  </main>
+
+  <footer class="w-full text-center text-xs text-slate-500">
+    ※ 詞條尺寸越大代表愈多位家長排入前三關心項目。
+  </footer>
+
+  <script>
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzNS9a0CumSnLw6qTjzczFBLyCx1NmbWL2Vt8q7qg-nRsfJdhBvKohMUF_BIDLRWVpxAw/exec";
+    const canvas = document.getElementById("cloudCanvas");
+
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    async function fetchAndUpdateCloud() {
+      try {
+        const res = await fetch(GAS_WEB_APP_URL);
+        const data = await res.json();
+        
+        document.getElementById("counter").innerText = data.totalResponses;
+
+        if (data.wordList && data.wordList.length > 0) {
+          // 動態計算字型大小權重
+          WordCloud(canvas, {
+            list: data.wordList,
+            gridSize: Math.round(16 * canvas.width / 1024),
+            weightFactor: function (size) {
+              return Math.max(22, (size * 12 * canvas.width / 1024));
+            },
+            fontFamily: 'Noto Sans TC, system-ui, sans-serif',
+            color: 'random-light',
+            backgroundColor: '#0f172a',
+            rotateRatio: 0.2,
+            rotationSteps: 2
+          });
+        }
+      } catch (err) {
+        console.error("更新文字雲失敗:", err);
+      }
+    }
+
+    // 初次載入與每 5 秒自動輪詢更新
+    fetchAndUpdateCloud();
+    setInterval(fetchAndUpdateCloud, 5000);
+  </script>
+</body>
+</html>
